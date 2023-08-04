@@ -1,0 +1,14 @@
+{
+  "name": "pulse-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {},
+  "keywords": [],
+  "author": "Nathaniel Richards",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NateTheDev1/pulse-server.git"
+  }
+}
