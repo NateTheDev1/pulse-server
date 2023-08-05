@@ -1,6 +1,6 @@
 {
   "name": "pulse-server",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Pulse Server Package For Node.js",
   "main": "index.js",
   "files": [
@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\"",
+    "format": "prettier --write \"src/**/*.ts\"",
     "lint": "tslint -p tsconfig.json",
     "prepare": "npm run build",
     "prepublishOnly": "npm test && npm run lint",
