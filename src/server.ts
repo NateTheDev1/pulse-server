@@ -27,13 +27,13 @@ export class PulseServer {
   private routes: Record<string, Record<string, PulseHandler[]>>;
   private logger!: Logger;
   private middleware: PulseHandler[] = [];
-  private corsEnabled: boolean = false;
 
   constructor(config?: PulseConfig) {
     this.config = {
       port: config?.port ?? 3000,
       usePulseLogger: config?.usePulseLogger ?? true,
       bodyFormat: config?.bodyFormat ?? 'JSON',
+      useCors: config?.useCors ?? false,
     };
 
     if (!config) {
@@ -66,9 +66,7 @@ export class PulseServer {
     }
   }
 
-  private enableCors() {
-    this.corsEnabled = true;
-
+  public enableCors() {
     this.use(this.corsMiddleware);
   }
 
