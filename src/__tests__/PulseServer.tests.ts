@@ -1,3 +1,4 @@
+import { before } from 'node:test';
 import PulseServer from '../index';
 import http from 'http';
 
@@ -10,6 +11,9 @@ describe('PulseServer', () => {
   let server: PulseServer;
 
   beforeEach(() => {
+    if (server) {
+      server.stop();
+    }
     server = new PulseServer(config);
     server.start(() => {});
   });

@@ -26,7 +26,9 @@ export class PulseServer {
       usePulseLogger: config?.usePulseLogger ?? true,
     };
 
-    this.loadConfig();
+    if (!config) {
+      this.loadConfig();
+    }
 
     this.routes = {};
 
@@ -49,6 +51,8 @@ export class PulseServer {
   }
 
   private loadConfig() {
+    console.log('No config provided, loading pulse.toml');
+
     try {
       // Read the TOML file from the root directory
       const fileContent = fs.readFileSync('pulse.toml', 'utf8');
@@ -64,9 +68,9 @@ export class PulseServer {
       this.config = { ...this.config, ...config };
     } catch (error: unknown) {
       if (error instanceof Error) {
-        throw new Error('Failed to load config.toml ' + error.message);
+        console.error('Failed to load config.toml ' + error.message);
       } else {
-        throw new Error('Failed to load config.toml: ' + 'An unknown error occurred');
+        console.error('Failed to load config.toml: ' + 'An unknown error occurred');
       }
     }
   }
