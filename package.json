@@ -1,6 +1,6 @@
 {
   "name": "pulse-server",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Pulse Server Package For Node.js",
   "main": "index.js",
   "files": [
