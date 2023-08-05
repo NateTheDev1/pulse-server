@@ -1,10 +1,10 @@
 # Pulse Server Package
 
 - [ ] server creator
-- [ ] custom logger
+- [x] custom logger
 - [ ] PulseErrors handler
 - [ ] logging config for static log files
-- [ ] config
+- [x] config
 - [ ] Content type accept rules
 - [ ] exported types
 - [ ] built in cors middleware
@@ -24,7 +24,7 @@
 - [ ] No more cookies or auth tokens in local storage. Check for hardware ID on the server for authentication
 - [ ] Built In Dashboard Application to view security features and auto documentation for your API
 - [ ] Built in routes (config based) for building your own administration apps
-    - [ ] Readable pulse.toml or pulse.json for config with typescript overrides in app
+  - [x] Readable pulse.toml or pulse.json for config with typescript overrides in app
 - [ ] Pulse queries for easy data fetching
 - [ ] Nested routing is intuitive
 - [ ] Route versioning: Versioning Support: Many APIs need to be versioned. Rather than manually handling the versioning, Express.js could provide a built-in mechanism for defining multiple versions of routes, and automatically routing requests to the correct version based on the request headers or URL.
@@ -37,4 +37,3 @@
 - [ ] Type generator for clients
 - [ ] Context middleware like graphql
 - [ ] CLI tool built with rust
-

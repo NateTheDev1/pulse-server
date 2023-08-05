@@ -1,4 +1,2 @@
 port = 3000
-
-[category]
-test = "test category"
+usePulseLogger = true
