@@ -1,5 +1,7 @@
+import { PulseBodyFormat } from './server';
+
 export type PulseConfig = {
   port: number;
   usePulseLogger?: boolean;
-  useJSONParser?: boolean;
+  bodyFormat?: PulseBodyFormat;
 };

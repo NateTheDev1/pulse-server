@@ -8,6 +8,8 @@ import toml from 'toml';
 import fs from 'fs';
 import { PulseConfig } from './config';
 import Logger from '@ptkdev/logger';
+import url from 'url';
+import cors from 'cors';
 
 export type PulseHandler = (
   req: http.IncomingMessage & { body?: Record<string, any> },
@@ -17,17 +19,21 @@ export type PulseHandler = (
 
 export type PulseError = {};
 
+export type PulseBodyFormat = 'JSON' | 'BUFFER' | 'RAW';
+
 export class PulseServer {
   private server: http.Server;
   private config: PulseConfig;
   private routes: Record<string, Record<string, PulseHandler[]>>;
   private logger!: Logger;
   private middleware: PulseHandler[] = [];
+  private corsEnabled: boolean = false;
 
   constructor(config?: PulseConfig) {
     this.config = {
       port: config?.port ?? 3000,
       usePulseLogger: config?.usePulseLogger ?? true,
+      bodyFormat: config?.bodyFormat ?? 'JSON',
     };
 
     if (!config) {
@@ -52,13 +58,18 @@ export class PulseServer {
     if (this.config.usePulseLogger) {
       this.use(this.loggerMiddleware);
     }
+
+    if (this.config.bodyFormat === 'JSON') {
+      this.use(this.jsonMiddleware);
+    } else if (this.config.bodyFormat === 'BUFFER') {
+      this.use(this.bufferMiddleware);
+    }
   }
 
-  /**
-   * Adds a JSON middleware handler to the server. This will parse the body of the request as JSON and fail if invalid JSON.
-   */
-  public json() {
-    this.use(this.jsonMiddleware);
+  private enableCors() {
+    this.corsEnabled = true;
+
+    this.use(this.corsMiddleware);
   }
 
   private loadConfig() {
@@ -107,6 +118,18 @@ export class PulseServer {
     if (next) next();
   };
 
+  private corsMiddleware: PulseHandler = (req, res, next) => {
+    cors()(req, res, (err) => {
+      if (err) {
+        console.error(err);
+        res.statusCode = 500;
+        res.end('Internal Server Error');
+        return;
+      }
+      if (next) next();
+    });
+  };
+
   private jsonMiddleware: PulseHandler = (req, res, next) => {
     let data = '';
 
@@ -121,6 +144,24 @@ export class PulseServer {
       } catch (error) {
         res.statusCode = 400;
         res.end('Bad Request: Invalid JSON');
+      }
+    });
+  };
+
+  private bufferMiddleware: PulseHandler = (req, res, next) => {
+    let chunks: Buffer[] = [];
+
+    req.on('data', (chunk: Buffer) => {
+      chunks.push(chunk);
+    });
+
+    req.on('end', () => {
+      try {
+        req.body = Buffer.concat(chunks);
+        if (next) next();
+      } catch (error) {
+        res.statusCode = 400;
+        res.end('Bad Request: Invalid Buffer');
       }
     });
   };
