@@ -4,6 +4,14 @@
         "tslint-config-prettier"
     ],
     "rules": {
-        "no-string-literal": false
+        "no-string-literal": false,
+        "no-console": false
+    },
+    "linterOptions": {
+        "exclude": [
+            "node_modules",
+            "example",
+            "./src/__tests__/**/*"
+        ]
     }
 }

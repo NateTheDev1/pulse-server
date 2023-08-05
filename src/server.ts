@@ -168,7 +168,7 @@ export class PulseServer {
   /**
    * Stops the server
    * @param errorCallback - The callback to run when the server stops
-   **/
+   */
   public stop(errorCallback?: (err?: Error | undefined) => void) {
     this.server.close(errorCallback);
   }
