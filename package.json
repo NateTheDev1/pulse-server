@@ -2,10 +2,11 @@
   "name": "pulse-server",
   "version": "0.0.4",
   "description": "Pulse Server Package For Node.js",
-  "main": "index.js",
+  "main": "dist/index.js",
   "files": [
     "dist/**/*"
   ],
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "format": "prettier --write \"src/**/*.ts\"",
@@ -40,6 +41,7 @@
     "typescript": "^5.1.6"
   },
   "dependencies": {
-    "@ptkdev/logger": "^1.8.0"
+    "@ptkdev/logger": "^1.8.0",
+    "toml": "^3.0.0"
   }
 }
