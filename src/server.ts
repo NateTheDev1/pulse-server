@@ -8,8 +8,8 @@ import toml from 'toml';
 import fs from 'fs';
 import { PulseConfig } from './config';
 import Logger from '@ptkdev/logger';
-import url from 'url';
 import cors from 'cors';
+import bodyParser from 'body-parser';
 
 export type PulseHandler = (
   req: http.IncomingMessage & { body?: Record<string, any> },
@@ -19,7 +19,7 @@ export type PulseHandler = (
 
 export type PulseError = {};
 
-export type PulseBodyFormat = 'JSON' | 'BUFFER' | 'RAW';
+export type PulseBodyFormat = 'JSON' | 'RAW' | 'TEXT' | 'UNSET';
 
 export class PulseServer {
   private server: http.Server;
@@ -32,7 +32,7 @@ export class PulseServer {
     this.config = {
       port: config?.port ?? 3000,
       usePulseLogger: config?.usePulseLogger ?? true,
-      bodyFormat: config?.bodyFormat ?? 'JSON',
+      bodyFormat: config?.bodyFormat ?? 'UNSET',
       useCors: config?.useCors ?? false,
     };
 
@@ -61,13 +61,25 @@ export class PulseServer {
 
     if (this.config.bodyFormat === 'JSON') {
       this.use(this.jsonMiddleware);
-    } else if (this.config.bodyFormat === 'BUFFER') {
+    } else if (this.config.bodyFormat === 'RAW') {
       this.use(this.bufferMiddleware);
+    } else if (this.config.bodyFormat === 'TEXT') {
+      this.use(this.textMiddleware);
     }
   }
 
   public enableCors() {
     this.use(this.corsMiddleware);
+  }
+
+  public setParser(type: PulseBodyFormat) {
+    if (type === 'JSON') {
+      this.use(this.jsonMiddleware);
+    } else if (type === 'RAW') {
+      this.use(this.bufferMiddleware);
+    } else if (type === 'TEXT') {
+      this.use(this.textMiddleware);
+    }
   }
 
   private loadConfig() {
@@ -129,38 +141,38 @@ export class PulseServer {
   };
 
   private jsonMiddleware: PulseHandler = (req, res, next) => {
-    let data = '';
-
-    req.on('data', (chunk) => {
-      data += chunk;
-    });
-
-    req.on('end', () => {
-      try {
-        req.body = JSON.parse(data);
-        if (next) next();
-      } catch (error) {
-        res.statusCode = 400;
-        res.end('Bad Request: Invalid JSON');
+    bodyParser.json()(req, res, (err) => {
+      if (err) {
+        console.error(err);
+        res.statusCode = 500;
+        res.end('Internal Server Error');
+        return;
       }
+      if (next) next();
     });
   };
 
   private bufferMiddleware: PulseHandler = (req, res, next) => {
-    let chunks: Buffer[] = [];
-
-    req.on('data', (chunk: Buffer) => {
-      chunks.push(chunk);
-    });
-
-    req.on('end', () => {
-      try {
-        req.body = Buffer.concat(chunks);
-        if (next) next();
-      } catch (error) {
-        res.statusCode = 400;
-        res.end('Bad Request: Invalid Buffer');
+    bodyParser.raw()(req, res, (err) => {
+      if (err) {
+        console.error(err);
+        res.statusCode = 500;
+        res.end('Internal Server Error');
+        return;
       }
+      if (next) next();
+    });
+  };
+
+  private textMiddleware: PulseHandler = (req, res, next) => {
+    bodyParser.text()(req, res, (err) => {
+      if (err) {
+        console.error(err);
+        res.statusCode = 500;
+        res.end('Internal Server Error');
+        return;
+      }
+      if (next) next();
     });
   };
 
