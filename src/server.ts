@@ -8,8 +8,13 @@ import toml from 'toml';
 import fs from 'fs';
 import { PulseConfig } from './config';
 import Logger from '@ptkdev/logger';
+import bodyParser from 'body-parser';
 
-export type PulseHandler = (req: http.IncomingMessage, res: http.ServerResponse, next?: () => void) => void;
+export type PulseHandler = (
+  req: http.IncomingMessage & { body?: Record<string, any> },
+  res: http.ServerResponse,
+  next?: () => void,
+) => void;
 
 export type PulseError = {};
 
@@ -48,6 +53,13 @@ export class PulseServer {
     if (this.config.usePulseLogger) {
       this.use(this.loggerMiddleware);
     }
+  }
+
+  /**
+   * Adds a JSON middleware handler to the server. This will parse the body of the request as JSON and fail if invalid JSON.
+   */
+  public json() {
+    this.use(this.jsonMiddleware);
   }
 
   private loadConfig() {
@@ -94,6 +106,24 @@ export class PulseServer {
   private loggerMiddleware: PulseHandler = (req, res, next) => {
     this.logger.info(req.method + ' Request To Route:' + req.url);
     if (next) next();
+  };
+
+  private jsonMiddleware: PulseHandler = (req, res, next) => {
+    let data = '';
+
+    req.on('data', (chunk) => {
+      data += chunk;
+    });
+
+    req.on('end', () => {
+      try {
+        req.body = JSON.parse(data);
+        if (next) next();
+      } catch (error) {
+        res.statusCode = 400;
+        res.end('Bad Request: Invalid JSON');
+      }
+    });
   };
 
   /**

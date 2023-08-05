@@ -1,6 +1,6 @@
 # Pulse Server Package
 
-- [ ] server creator
+- [x] server creator
 - [x] custom logger
 - [ ] PulseErrors handler
 - [ ] logging config for static log files
