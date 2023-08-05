@@ -8,7 +8,6 @@ import toml from 'toml';
 import fs from 'fs';
 import { PulseConfig } from './config';
 import Logger from '@ptkdev/logger';
-import bodyParser from 'body-parser';
 
 export type PulseHandler = (
   req: http.IncomingMessage & { body?: Record<string, any> },
