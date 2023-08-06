@@ -7,11 +7,6 @@ const config: PulseConfig = {
   port: 3000,
   usePulseLogger: true,
   staticLogFile: false,
-  rateLimit: {
-    enabled: true,
-    timeMs: 3600000,
-    maxRequests: 2,
-  },
 };
 
 describe('PulseServer', () => {
