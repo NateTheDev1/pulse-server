@@ -3,15 +3,14 @@
 - [x] server creator
 - [x] custom logger
 - [ ] PulseErrors handler
-- [ ] logging config for static log files
+- [x] logging config for static log files
 - [x] config
-- [ ] Content type accept rules
-- [ ] exported types
-- [ ] built in cors middleware
-- [ ] implement basic express middleware
-- [ ] routes
-- [ ] middleware
-- [ ] built in middleware enabled in config
+- [x] exported types
+- [x] built in cors middleware
+- [x] implement basic express middleware
+- [x] routes
+- [x] middleware
+- [x] built in middleware enabled in config
 - [ ] built in pulse socket
 - [ ] pulse socket uses in memory database to track connections and send updates to connections. Clients subscribe to specific database tables or even rows.
 - [ ] Defined pulse schema creator using PulseType which creates the tracking foundation

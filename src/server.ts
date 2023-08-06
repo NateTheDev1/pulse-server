@@ -13,6 +13,7 @@ import url from 'url';
 import querystring from 'querystring';
 import log4js from 'log4js';
 import { PulseRouteInfo, PulseRouteOptions, PulseRoutePattern, matchRoute } from './route';
+import { PulseDB } from './database';
 
 export type PulseHandler = (req: PulseRequest, res: http.ServerResponse, next?: () => void) => void;
 
@@ -39,6 +40,7 @@ export class PulseServer {
       disableParamMiddleware: config?.disableParamMiddleware ?? false,
       staticLogFile: config?.staticLogFile ?? false,
       staticLogFileName: config?.staticLogFileName ?? 'pulse.log',
+      rateLimit: config?.rateLimit ?? undefined,
     };
 
     if (this.config.staticLogFile) {
@@ -104,6 +106,10 @@ export class PulseServer {
 
     if (this.config.usePulseLogger) {
       this.use(this.loggerMiddleware);
+    }
+
+    if (this.config.rateLimit?.enabled) {
+      this.use(this.rateLimitMiddleware);
     }
 
     if (!this.config.disableParamMiddleware) {
@@ -194,6 +200,42 @@ export class PulseServer {
         return;
       }
       if (next) next();
+    });
+  };
+
+  private rateLimitMiddleware: PulseHandler = (req, res, next) => {
+    const MAX_REQUESTS = this.config.rateLimit?.maxRequests ?? 100;
+    const TIME_FRAME = this.config.rateLimit?.timeMs ?? 3600000; // 1 hour in milliseconds
+
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+    // Check how many requests this IP made in the time frame
+    PulseDB.rateLimitingDatastore.find({ ip, date: { $gt: Date.now() - TIME_FRAME } }, (err: any, docs: any) => {
+      if (err) {
+        console.error(err);
+        res.statusCode = 500;
+        res.end('Internal Server Error');
+        return;
+      }
+
+      if (docs.length > MAX_REQUESTS) {
+        res.statusCode = 429; // Too Many Requests
+        res.end('Rate limit exceeded');
+        return;
+      }
+
+      // Store this request
+      PulseDB.rateLimitingDatastore.insert({ ip, date: Date.now() }, (err) => {
+        if (err) {
+          console.error(err);
+          res.statusCode = 500;
+          res.end('Internal Server Error');
+          return;
+        }
+
+        // Continue to other middleware/functions
+        if (next) next();
+      });
     });
   };
 
@@ -378,3 +420,5 @@ export class PulseServer {
     this.server.close(errorCallback);
   }
 }
+
+export * from './route';

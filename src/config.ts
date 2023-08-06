@@ -9,4 +9,9 @@ export type PulseConfig = {
   disableParamMiddleware?: boolean;
   staticLogFile?: boolean;
   staticLogFileName?: string;
+  rateLimit?: {
+    enabled: boolean;
+    timeMs: number;
+    maxRequests: number;
+  };
 };
