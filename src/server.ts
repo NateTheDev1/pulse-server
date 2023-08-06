@@ -42,7 +42,7 @@ export class PulseServer {
       staticLogFile: config?.staticLogFile ?? false,
       staticLogFileName: config?.staticLogFileName ?? 'pulse.log',
       rateLimit: config?.rateLimit ?? undefined,
-      dashboard: config?.dashboard ?? false,
+      dashboard: process.env.NODE_ENV === 'development' && config?.dashboard ? config.dashboard : false,
     };
 
     if (this.config.staticLogFile) {
@@ -130,6 +130,8 @@ export class PulseServer {
 
     if (this.config.dashboard) {
       adminRouter(this);
+
+      this.logger.info("Pulse's dashboard is now available at http://localhost:" + this.config.port + '/admin');
     }
   }
 
