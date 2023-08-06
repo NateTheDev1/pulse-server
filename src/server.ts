@@ -58,10 +58,14 @@ export class PulseServer {
           if (m === req.method) {
             for (const routeInfo of this.routes[pattern][m]) {
               const params = matchRoute(routeInfo.pattern, urlPath);
+
               if (params) {
                 req.params = { ...req.params, ...params };
-                matchedHandler = routeInfo.handler;
                 break;
+              }
+
+              if (routeInfo.pattern.original === this.config?.apiVersion + urlPath) {
+                matchedHandler = routeInfo.handler;
               }
             }
           }
@@ -93,6 +97,10 @@ export class PulseServer {
     }
 
     this.use(this.validateParamsMiddleware);
+  }
+
+  public setAPIVersion(version: string) {
+    this.config.apiVersion = version;
   }
 
   public enableCors() {
@@ -263,7 +271,7 @@ export class PulseServer {
    * @param handler - The handler to add to the route
    */
   public get(path: string, handler: PulseHandler, options?: PulseRouteOptions) {
-    return this.addRoute('GET', path, handler);
+    return this.addRoute('GET', path, handler, options);
   }
 
   /**
@@ -272,7 +280,7 @@ export class PulseServer {
    * @param handler - The handler to add to the route
    */
   public post(path: string, handler: PulseHandler, options?: PulseRouteOptions) {
-    return this.addRoute('POST', path, handler);
+    return this.addRoute('POST', path, handler, options);
   }
 
   /**
@@ -281,7 +289,7 @@ export class PulseServer {
    * @param handler - The handler to add to the route
    */
   public delete(path: string, handler: PulseHandler, options?: PulseRouteOptions) {
-    return this.addRoute('DELETE', path, handler);
+    return this.addRoute('DELETE', path, handler, options);
   }
 
   /**
@@ -290,11 +298,13 @@ export class PulseServer {
    * @param handler - The handler to add to the route
    */
   public put(path: string, handler: PulseHandler, options?: PulseRouteOptions) {
-    return this.addRoute('PUT', path, handler);
+    return this.addRoute('PUT', path, handler, options);
   }
 
   private addRoute(method: string, path: string, handler: PulseHandler, options?: PulseRouteOptions) {
     const versionedPath = options && options.apiVersion ? options.apiVersion + path : this.config.apiVersion + path;
+
+    this.logger.sponsor('Adding route: ' + versionedPath);
 
     const pattern: PulseRoutePattern = {
       original: versionedPath,
@@ -348,5 +358,3 @@ export class PulseServer {
     this.server.close(errorCallback);
   }
 }
-
-const server = new PulseServer();

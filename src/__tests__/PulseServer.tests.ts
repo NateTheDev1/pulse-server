@@ -14,6 +14,7 @@ describe('PulseServer', () => {
     if (server) {
       server.stop();
     }
+
     server = new PulseServer(config);
     server.start(() => {});
   });
@@ -26,6 +27,7 @@ describe('PulseServer', () => {
     server.get('/test', (req, res) => {
       res.end('GET success');
     });
+
     http.get('http://localhost:3000/test', (res) => {
       let data = '';
       res.on('data', (chunk) => {
@@ -33,6 +35,33 @@ describe('PulseServer', () => {
       });
       res.on('end', () => {
         expect(data).toBe('GET success');
+        done();
+      });
+    });
+  });
+
+  test('GET request to defined route on different API version', (done) => {
+    server.get(
+      '/test',
+      (req, res) => {
+        res.end('GET success v2');
+      },
+      { apiVersion: 'v2' },
+    );
+
+    server.get('/test', (req, res) => {
+      res.end('GET success');
+    });
+
+    server.setAPIVersion('v2');
+
+    http.get('http://localhost:3000/test', (res) => {
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        expect(data).toBe('GET success v2');
         done();
       });
     });
