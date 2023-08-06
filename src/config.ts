@@ -5,4 +5,5 @@ export type PulseConfig = {
   usePulseLogger?: boolean;
   bodyFormat?: PulseBodyFormat;
   useCors?: boolean;
+  apiVersion?: string;
 };

@@ -27,7 +27,7 @@
   - [x] Readable pulse.toml or pulse.json for config with typescript overrides in app
 - [ ] Pulse queries for easy data fetching
 - [ ] Nested routing is intuitive
-- [ ] Route versioning: Versioning Support: Many APIs need to be versioned. Rather than manually handling the versioning, Express.js could provide a built-in mechanism for defining multiple versions of routes, and automatically routing requests to the correct version based on the request headers or URL.
+- [x] Route versioning
 - [ ] Auto route param validation if configured using typescript types
 - [ ] Auto version routing for different routes on different api versions
 - [ ] Development helpfulness: Tells you duplicate route errors, hints for bad route naming

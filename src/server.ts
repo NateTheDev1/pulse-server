@@ -17,7 +17,18 @@ export type PulseHandler = (
   next?: () => void,
 ) => void;
 
+export interface PulseRouteBuilder {
+  get: (path: string, handler: PulseHandler) => PulseRouteBuilder;
+  post: (path: string, handler: PulseHandler) => PulseRouteBuilder;
+  put: (path: string, handler: PulseHandler) => PulseRouteBuilder;
+  delete: (path: string, handler: PulseHandler) => PulseRouteBuilder;
+}
+
 export type PulseError = {};
+
+export type PulseRouteOptions = {
+  apiVersion?: string;
+};
 
 export type PulseBodyFormat = 'JSON' | 'RAW' | 'TEXT' | 'UNSET';
 
@@ -34,6 +45,7 @@ export class PulseServer {
       usePulseLogger: config?.usePulseLogger ?? true,
       bodyFormat: config?.bodyFormat ?? 'UNSET',
       useCors: config?.useCors ?? false,
+      apiVersion: config?.apiVersion ?? 'v1',
     };
 
     if (!config) {
@@ -181,14 +193,8 @@ export class PulseServer {
    * @param path - The path to add the route to
    * @param handler - The handler to add to the route
    */
-  public get(path: string, handler: PulseHandler) {
-    if (!this.routes[path]) {
-      this.routes[path] = {};
-    }
-    if (!this.routes[path]['GET']) {
-      this.routes[path]['GET'] = [];
-    }
-    this.routes[path]['GET'].push(handler);
+  public get(path: string, handler: PulseHandler, options?: PulseRouteOptions) {
+    return this.addRoute('GET', path, handler);
   }
 
   /**
@@ -196,14 +202,8 @@ export class PulseServer {
    * @param path - The path to add the route to
    * @param handler - The handler to add to the route
    */
-  public post(path: string, handler: PulseHandler) {
-    if (!this.routes[path]) {
-      this.routes[path] = {};
-    }
-    if (!this.routes[path]['POST']) {
-      this.routes[path]['POST'] = [];
-    }
-    this.routes[path]['POST'].push(handler);
+  public post(path: string, handler: PulseHandler, options?: PulseRouteOptions) {
+    return this.addRoute('POST', path, handler);
   }
 
   /**
@@ -211,14 +211,8 @@ export class PulseServer {
    * @param path - The path to add the route to
    * @param handler - The handler to add to the route
    */
-  public delete(path: string, handler: PulseHandler) {
-    if (!this.routes[path]) {
-      this.routes[path] = {};
-    }
-    if (!this.routes[path]['DELETE']) {
-      this.routes[path]['DELETE'] = [];
-    }
-    this.routes[path]['DELETE'].push(handler);
+  public delete(path: string, handler: PulseHandler, options?: PulseRouteOptions) {
+    return this.addRoute('DELETE', path, handler);
   }
 
   /**
@@ -226,14 +220,34 @@ export class PulseServer {
    * @param path - The path to add the route to
    * @param handler - The handler to add to the route
    */
-  public put(path: string, handler: PulseHandler) {
-    if (!this.routes[path]) {
-      this.routes[path] = {};
+  public put(path: string, handler: PulseHandler, options?: PulseRouteOptions) {
+    return this.addRoute('PUT', path, handler);
+  }
+
+  private addRoute(method: string, path: string, handler: PulseHandler, options?: PulseRouteOptions) {
+    const versionedPath = options && options.apiVersion ? options.apiVersion + path : this.config.apiVersion + path; // prepend path with version
+    if (!this.routes[versionedPath]) {
+      this.routes[versionedPath] = {};
     }
-    if (!this.routes[path]['PUT']) {
-      this.routes[path]['PUT'] = [];
+    if (!this.routes[versionedPath][method]) {
+      this.routes[versionedPath][method] = [];
     }
-    this.routes[path]['PUT'].push(handler);
+    this.routes[versionedPath][method].push(handler);
+
+    return {
+      get: (subPath: string, handler: PulseHandler, options?: PulseRouteOptions) => {
+        return this.addRoute('GET', path + subPath, handler, options);
+      },
+      post: (subPath: string, handler: PulseHandler, options?: PulseRouteOptions) => {
+        return this.addRoute('POST', path + subPath, handler, options);
+      },
+      put: (subPath: string, handler: PulseHandler, options?: PulseRouteOptions) => {
+        return this.addRoute('PUT', path + subPath, handler, options);
+      },
+      delete: (subPath: string, handler: PulseHandler, options?: PulseRouteOptions) => {
+        return this.addRoute('DELETE', path + subPath, handler, options);
+      },
+    };
   }
 
   private routeFallback(req: http.IncomingMessage, res: http.ServerResponse) {
@@ -257,3 +271,5 @@ export class PulseServer {
     this.server.close(errorCallback);
   }
 }
+
+const server = new PulseServer();
