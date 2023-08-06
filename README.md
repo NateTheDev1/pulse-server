@@ -15,8 +15,8 @@
 - [ ] pulse socket uses in memory database to track connections and send updates to connections. Clients subscribe to specific database tables or even rows.
 - [ ] Defined pulse schema creator using PulseType which creates the tracking foundation
 - [ ] built in auth library
-- [ ] Rate Limiting Support
-- [ ] documented functions
+- [x] Rate Limiting Support
+- [x] documented functions
 - [ ] Multiple Or Single Location login support
 - [ ] AI/logic powered whitelist/blacklist system with custom rules. Uses logic to flag users
 - [ ] Built in performance monitoring config

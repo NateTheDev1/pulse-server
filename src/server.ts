@@ -14,6 +14,7 @@ import querystring from 'querystring';
 import log4js from 'log4js';
 import { PulseRouteInfo, PulseRouteOptions, PulseRoutePattern, matchRoute } from './route';
 import { PulseDB } from './database';
+import { adminRouter } from './admin';
 
 export type PulseHandler = (req: PulseRequest, res: http.ServerResponse, next?: () => void) => void;
 
@@ -125,6 +126,8 @@ export class PulseServer {
     }
 
     this.use(this.validateParamsMiddleware);
+
+    adminRouter(this);
   }
 
   public setAPIVersion(version: string) {
