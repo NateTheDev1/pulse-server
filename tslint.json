@@ -5,7 +5,9 @@
     ],
     "rules": {
         "no-string-literal": false,
-        "no-console": false
+        "no-console": false,
+        "forin": false,
+        "no-shadowed-variable": false
     },
     "linterOptions": {
         "exclude": [
