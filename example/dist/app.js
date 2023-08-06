@@ -5,8 +5,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const pulse_server_1 = __importDefault(require("pulse-server"));
 const server = new pulse_server_1.default();
-server.get('/', (req, res) => {
+server.get('/login/:id', (req, res) => {
     res.end('Hello World!');
+}, {
+    apiVersion: '2',
+    paramRules: {
+        id: 'number',
+    },
 });
 server.start(() => {
     console.log('Server started!');
