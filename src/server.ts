@@ -7,11 +7,11 @@ import http from 'http';
 import toml from 'toml';
 import fs from 'fs';
 import { PulseConfig } from './config';
-import Logger from '@ptkdev/logger';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import url from 'url';
 import querystring from 'querystring';
+import log4js from 'log4js';
 import { PulseRouteInfo, PulseRouteOptions, PulseRoutePattern, matchRoute } from './route';
 
 export type PulseHandler = (req: PulseRequest, res: http.ServerResponse, next?: () => void) => void;
@@ -26,7 +26,7 @@ export class PulseServer {
   private server: http.Server;
   private config: PulseConfig;
   private routes: Record<string, Record<string, PulseRouteInfo[]>>;
-  private logger!: Logger;
+  private logger!: log4js.Logger;
   private middleware: PulseHandler[] = [];
 
   constructor(config?: PulseConfig) {
@@ -37,7 +37,29 @@ export class PulseServer {
       useCors: config?.useCors ?? false,
       apiVersion: config?.apiVersion ?? 'v1',
       disableParamMiddleware: config?.disableParamMiddleware ?? false,
+      staticLogFile: config?.staticLogFile ?? false,
+      staticLogFileName: config?.staticLogFileName ?? 'pulse.log',
     };
+
+    if (this.config.staticLogFile) {
+      log4js.configure({
+        appenders: {
+          file: { type: 'file', filename: this.config.staticLogFileName },
+        },
+        categories: {
+          default: { appenders: ['file'], level: 'debug' },
+        },
+      });
+    } else {
+      log4js.configure({
+        appenders: {
+          out: { type: 'stdout' },
+        },
+        categories: {
+          default: { appenders: ['out'], level: 'debug' },
+        },
+      });
+    }
 
     if (!config) {
       this.loadConfig();
@@ -45,9 +67,9 @@ export class PulseServer {
 
     this.routes = {};
 
-    this.logger = new Logger();
+    this.logger = log4js.getLogger('default');
 
-    this.logger.sponsor('Thank you for using Pulse!');
+    this.logger.info('Thank you for using Pulse!');
 
     this.server = http.createServer((req: PulseRequest, res) => {
       const urlPath = url.parse(req.url!).pathname!;
@@ -303,8 +325,6 @@ export class PulseServer {
 
   private addRoute(method: string, path: string, handler: PulseHandler, options?: PulseRouteOptions) {
     const versionedPath = options && options.apiVersion ? options.apiVersion + path : this.config.apiVersion + path;
-
-    this.logger.sponsor('Adding route: ' + versionedPath);
 
     const pattern: PulseRoutePattern = {
       original: versionedPath,

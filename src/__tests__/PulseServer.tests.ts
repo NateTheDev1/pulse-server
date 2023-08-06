@@ -1,10 +1,12 @@
 import { before } from 'node:test';
 import PulseServer from '../index';
 import http from 'http';
+import { PulseConfig } from '../config';
 
-const config = {
+const config: PulseConfig = {
   port: 3000,
   usePulseLogger: true,
+  staticLogFile: false,
 };
 
 describe('PulseServer', () => {

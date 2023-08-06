@@ -7,4 +7,6 @@ export type PulseConfig = {
   useCors?: boolean;
   apiVersion?: string;
   disableParamMiddleware?: boolean;
+  staticLogFile?: boolean;
+  staticLogFileName?: string;
 };
