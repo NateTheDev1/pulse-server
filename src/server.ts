@@ -10,32 +10,22 @@ import { PulseConfig } from './config';
 import Logger from '@ptkdev/logger';
 import cors from 'cors';
 import bodyParser from 'body-parser';
+import url from 'url';
+import querystring from 'querystring';
+import { PulseRouteInfo, PulseRouteOptions, PulseRoutePattern, matchRoute } from './route';
 
-export type PulseHandler = (
-  req: http.IncomingMessage & { body?: Record<string, any> },
-  res: http.ServerResponse,
-  next?: () => void,
-) => void;
+export type PulseHandler = (req: PulseRequest, res: http.ServerResponse, next?: () => void) => void;
 
-export interface PulseRouteBuilder {
-  get: (path: string, handler: PulseHandler) => PulseRouteBuilder;
-  post: (path: string, handler: PulseHandler) => PulseRouteBuilder;
-  put: (path: string, handler: PulseHandler) => PulseRouteBuilder;
-  delete: (path: string, handler: PulseHandler) => PulseRouteBuilder;
-}
+export type PulseRequest = http.IncomingMessage & { body?: Record<string, any>; params?: querystring.ParsedUrlQuery };
 
 export type PulseError = {};
-
-export type PulseRouteOptions = {
-  apiVersion?: string;
-};
 
 export type PulseBodyFormat = 'JSON' | 'RAW' | 'TEXT' | 'UNSET';
 
 export class PulseServer {
   private server: http.Server;
   private config: PulseConfig;
-  private routes: Record<string, Record<string, PulseHandler[]>>;
+  private routes: Record<string, Record<string, PulseRouteInfo[]>>;
   private logger!: Logger;
   private middleware: PulseHandler[] = [];
 
@@ -46,6 +36,7 @@ export class PulseServer {
       bodyFormat: config?.bodyFormat ?? 'UNSET',
       useCors: config?.useCors ?? false,
       apiVersion: config?.apiVersion ?? 'v1',
+      disableParamMiddleware: config?.disableParamMiddleware ?? false,
     };
 
     if (!config) {
@@ -58,10 +49,28 @@ export class PulseServer {
 
     this.logger.sponsor('Thank you for using Pulse!');
 
-    this.server = http.createServer((req, res) => {
-      const matchedRoutes = this.routes[req.url!];
-      const matchedMethod = matchedRoutes ? matchedRoutes[req.method!] : null;
-      const handler = matchedMethod && matchedMethod.length ? matchedMethod : [this.routeFallback];
+    this.server = http.createServer((req: PulseRequest, res) => {
+      const urlPath = url.parse(req.url!).pathname!;
+
+      let matchedHandler: PulseHandler | null = null;
+      for (const pattern in this.routes) {
+        for (const m in this.routes[pattern]) {
+          if (m === req.method) {
+            for (const routeInfo of this.routes[pattern][m]) {
+              const params = matchRoute(routeInfo.pattern, urlPath);
+              if (params) {
+                req.params = { ...req.params, ...params };
+                matchedHandler = routeInfo.handler;
+                break;
+              }
+            }
+          }
+          if (matchedHandler) break;
+        }
+        if (matchedHandler) break;
+      }
+
+      const handler = matchedHandler ? [matchedHandler] : [this.routeFallback];
 
       const handlers = [...this.middleware, ...handler];
       this.handle(req, res, handlers);
@@ -71,6 +80,10 @@ export class PulseServer {
       this.use(this.loggerMiddleware);
     }
 
+    if (!this.config.disableParamMiddleware) {
+      this.use(this.paramMiddleware);
+    }
+
     if (this.config.bodyFormat === 'JSON') {
       this.use(this.jsonMiddleware);
     } else if (this.config.bodyFormat === 'RAW') {
@@ -78,6 +91,8 @@ export class PulseServer {
     } else if (this.config.bodyFormat === 'TEXT') {
       this.use(this.textMiddleware);
     }
+
+    this.use(this.validateParamsMiddleware);
   }
 
   public enableCors() {
@@ -164,6 +179,60 @@ export class PulseServer {
     });
   };
 
+  private validateParamsMiddleware: PulseHandler = (req: PulseRequest, res, next) => {
+    const urlPath = url.parse(req.url!).pathname!;
+
+    for (const pattern in this.routes) {
+      for (const m in this.routes[pattern]) {
+        if (m === req.method) {
+          for (const routeInfo of this.routes[pattern][m]) {
+            const params = matchRoute(routeInfo.pattern, urlPath);
+            if (params && routeInfo.paramRules) {
+              for (const [paramName, paramType] of Object.entries(routeInfo.paramRules)) {
+                if (!this.validateParamType(params[paramName], paramType)) {
+                  res.statusCode = 400;
+                  res.end('Invalid param type for ' + paramName);
+                  return;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (next) next();
+  };
+
+  private validateParamType(value: any, expectedType: string): boolean {
+    switch (expectedType) {
+      case 'string':
+        return typeof value === 'string';
+      case 'number':
+        return typeof value === 'number';
+      case 'boolean':
+        return typeof value === 'boolean';
+      case 'array':
+        return Array.isArray(value);
+      case 'object':
+        return value !== null && typeof value === 'object' && !Array.isArray(value);
+      case 'any':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  private paramMiddleware: PulseHandler = (req, res, next) => {
+    const parsedUrl = url.parse(req.url!);
+
+    if (parsedUrl.query) {
+      req.params = querystring.parse(parsedUrl.query);
+    }
+
+    if (next) next();
+  };
+
   private bufferMiddleware: PulseHandler = (req, res, next) => {
     bodyParser.raw()(req, res, (err) => {
       if (err) {
@@ -225,14 +294,22 @@ export class PulseServer {
   }
 
   private addRoute(method: string, path: string, handler: PulseHandler, options?: PulseRouteOptions) {
-    const versionedPath = options && options.apiVersion ? options.apiVersion + path : this.config.apiVersion + path; // prepend path with version
+    const versionedPath = options && options.apiVersion ? options.apiVersion + path : this.config.apiVersion + path;
+
+    const pattern: PulseRoutePattern = {
+      original: versionedPath,
+      segments: versionedPath.split('/'),
+    };
+
     if (!this.routes[versionedPath]) {
       this.routes[versionedPath] = {};
     }
+
     if (!this.routes[versionedPath][method]) {
       this.routes[versionedPath][method] = [];
     }
-    this.routes[versionedPath][method].push(handler);
+
+    this.routes[versionedPath][method].push({ handler, pattern, paramRules: options?.paramRules });
 
     return {
       get: (subPath: string, handler: PulseHandler, options?: PulseRouteOptions) => {

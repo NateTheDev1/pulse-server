@@ -6,4 +6,5 @@ export type PulseConfig = {
   bodyFormat?: PulseBodyFormat;
   useCors?: boolean;
   apiVersion?: string;
+  disableParamMiddleware?: boolean;
 };
