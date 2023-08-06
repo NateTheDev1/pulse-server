@@ -42,6 +42,7 @@ export class PulseServer {
       staticLogFile: config?.staticLogFile ?? false,
       staticLogFileName: config?.staticLogFileName ?? 'pulse.log',
       rateLimit: config?.rateLimit ?? undefined,
+      dashboard: config?.dashboard ?? false,
     };
 
     if (this.config.staticLogFile) {
@@ -127,7 +128,9 @@ export class PulseServer {
 
     this.use(this.validateParamsMiddleware);
 
-    adminRouter(this);
+    if (this.config.dashboard) {
+      adminRouter(this);
+    }
   }
 
   public setAPIVersion(version: string) {

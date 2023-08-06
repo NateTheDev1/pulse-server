@@ -14,4 +14,5 @@ export type PulseConfig = {
     timeMs: number;
     maxRequests: number;
   };
+  dashboard?: boolean;
 };
