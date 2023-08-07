@@ -178,7 +178,11 @@ export class PulseServer {
     this.use(this.ipGateMiddleware);
   }
 
-  public loginUser(req: PulseRequest) {
+  /**
+   * Logs a user in using Pulse Unique Identities
+   * @param req The request object
+   */
+  public loginUser(req: PulseRequest): void {
     const ID = this.auth.createUserDeviceID(req);
     let exists = false;
 
@@ -197,6 +201,11 @@ export class PulseServer {
     });
   }
 
+  /**
+   * Checks if a user is logged in using Pulse Unique Identities
+   * @param req The request object
+   * @returns True if the user is logged in, false if not
+   */
   public isUserLoggedIn(req: PulseRequest): boolean {
     const ID = this.auth.createUserDeviceID(req);
     let exists = false;
@@ -210,6 +219,10 @@ export class PulseServer {
     return exists;
   }
 
+  /**
+   * Logs a user out using Pulse Unique Identities
+   * @param req The request object
+   */
   public logoutUser(req: PulseRequest) {
     const ID = this.auth.createUserDeviceID(req);
     let exists = false;
@@ -227,7 +240,25 @@ export class PulseServer {
     }
   }
 
-  public logoutUserByID(id: string) {}
+  /**
+   * Logs a user out using their Pulse Unique Identity
+   * @param ID The unique Pulse Identity of the user to log out
+   */
+  public logoutUserByID(ID: string) {
+    let exists = false;
+
+    PulseDB.deviceDatastore.find({ id: ID }, (err: any, doc: any) => {
+      if (doc.length > 0) {
+        exists = true;
+      }
+    });
+
+    if (!exists) {
+      return;
+    } else {
+      PulseDB.deviceDatastore.remove({ id: ID });
+    }
+  }
 
   /**
    * Blacklists a user from the server
