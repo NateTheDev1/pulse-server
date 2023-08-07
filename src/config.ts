@@ -1,4 +1,4 @@
-import { PulseBodyFormat } from './server';
+import { PulseBodyFormat, PulseIPGateMethod } from './server';
 
 export type PulseConfig = {
   port: number;
@@ -15,4 +15,5 @@ export type PulseConfig = {
     maxRequests: number;
   };
   dashboard?: boolean;
+  ipGateMethod?: PulseIPGateMethod;
 };

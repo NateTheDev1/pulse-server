@@ -29,6 +29,8 @@ export type PulseError = {};
 
 export type PulseBodyFormat = 'JSON' | 'RAW' | 'TEXT' | 'UNSET';
 
+export type PulseIPGateMethod = 'BLACKLIST' | 'WHITELIST' | 'NONE';
+
 export class PulseServer {
   private server: http.Server;
   private config: PulseConfig;
@@ -37,6 +39,8 @@ export class PulseServer {
   private middleware: PulseHandler[] = [];
   private context: Record<string, any> = {};
   private contextFn = () => {};
+  private whitelist: string[] = [];
+  private blacklist: string[] = [];
 
   constructor(config?: PulseConfig) {
     this.config = {
@@ -50,6 +54,7 @@ export class PulseServer {
       staticLogFileName: config?.staticLogFileName ?? 'pulse.log',
       rateLimit: config?.rateLimit ?? undefined,
       dashboard: process.env.NODE_ENV === 'development' && config?.dashboard ? config.dashboard : false,
+      ipGateMethod: config?.ipGateMethod ?? 'NONE',
     };
 
     if (this.config.staticLogFile) {
@@ -156,6 +161,40 @@ export class PulseServer {
 
       this.logger.info("Pulse's dashboard is now available at http://localhost:" + this.config.port + '/admin');
     }
+
+    this.use(this.ipGateMiddleware);
+  }
+
+  /**
+   * Blacklists a user from the server
+   * @param identity The identity of the user to blacklist
+   */
+  public blackListUser(identity: string) {
+    this.blacklist.push(identity);
+  }
+
+  /**
+   * Adds a user to the server whitelist
+   * @param identity The identity of the user to whitelist
+   */
+  public whiteListUser(identity: string) {
+    this.whitelist.push(identity);
+  }
+
+  /**
+   * Blacklists multiple users from the server
+   * @param identities The identities of the users to blacklist
+   */
+  public blackListUsers(identities: string[]) {
+    this.blacklist = [...this.blacklist, ...identities];
+  }
+
+  /**
+   * Whitelists multiple users from the server
+   * @param identities The identities of the users to whitelist
+   */
+  public whiteListUsers(identities: string[]) {
+    this.whitelist = [...this.whitelist, ...identities];
   }
 
   /**
@@ -305,6 +344,42 @@ export class PulseServer {
       }
       if (next) next();
     });
+  };
+
+  private ipGateMiddleware: PulseHandler = (req, res, next) => {
+    if (this.config.ipGateMethod === 'BLACKLIST') {
+      this.blackListMiddlware(req, res, next);
+    } else if (this.config.ipGateMethod === 'WHITELIST') {
+      this.whiteListMiddleware(req, res, next);
+    } else {
+      if (next) next();
+    }
+  };
+
+  private blackListMiddlware: PulseHandler = (req, res, next) => {
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+    if (!ip) return;
+
+    if (this.blacklist.includes(ip.toString())) {
+      res.statusCode = 401;
+      res.end('Unauthorized');
+    } else {
+      if (next) next();
+    }
+  };
+
+  private whiteListMiddleware: PulseHandler = (req, res, next) => {
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+    if (!ip) return;
+
+    if (this.whitelist.includes(ip.toString())) {
+      if (next) next();
+    } else {
+      res.statusCode = 401;
+      res.end('Unauthorized');
+    }
   };
 
   private rateLimitMiddleware: PulseHandler = (req, res, next) => {
