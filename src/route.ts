@@ -11,6 +11,7 @@ export interface PulseRouteBuilder {
   post: (path: string, handler: PulseHandler) => PulseRouteBuilder;
   put: (path: string, handler: PulseHandler) => PulseRouteBuilder;
   delete: (path: string, handler: PulseHandler) => PulseRouteBuilder;
+  all: (path: string, handler: PulseHandler) => PulseRouteBuilder;
 }
 
 export type PulseRouteOptions = {

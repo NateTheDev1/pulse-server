@@ -12,13 +12,18 @@ import bodyParser from 'body-parser';
 import url from 'url';
 import querystring from 'querystring';
 import log4js from 'log4js';
-import { PulseRouteInfo, PulseRouteOptions, PulseRoutePattern, matchRoute } from './route';
+import { PulseRouteBuilder, PulseRouteInfo, PulseRouteOptions, PulseRoutePattern, matchRoute } from './route';
 import { PulseDB } from './database';
 import { adminRouter } from './admin';
 
-export type PulseHandler = (req: PulseRequest, res: http.ServerResponse, next?: () => void) => void;
+export type PulseHandler = (req: PulseRequest, res: PulseResponse, next?: () => void) => void;
 
 export type PulseRequest = http.IncomingMessage & { body?: Record<string, any>; params?: querystring.ParsedUrlQuery };
+
+export type PulseResponse = http.ServerResponse & {
+  send: (data: string | Array<any> | Object | Buffer) => void;
+  json: (data: Object) => void;
+};
 
 export type PulseError = {};
 
@@ -86,7 +91,20 @@ export class PulseServer {
       let matchedHandler: PulseHandler | null = null;
       for (const pattern in this.routes) {
         for (const m in this.routes[pattern]) {
-          if (m === req.method) {
+          if (m === 'ALL') {
+            for (const routeInfo of this.routes[pattern][m]) {
+              const params = matchRoute(routeInfo.pattern, urlPath);
+
+              if (params) {
+                req.params = { ...req.params, ...params };
+                break;
+              }
+
+              if (routeInfo.pattern.original === this.config?.apiVersion + urlPath) {
+                matchedHandler = routeInfo.handler;
+              }
+            }
+          } else if (m === req.method) {
             for (const routeInfo of this.routes[pattern][m]) {
               const params = matchRoute(routeInfo.pattern, urlPath);
 
@@ -218,10 +236,48 @@ export class PulseServer {
     }
   }
 
+  private createPulseResponse(res: http.ServerResponse): PulseResponse {
+    return {
+      ...res,
+      json: (data: Object) => {
+        try {
+          data = JSON.stringify(data);
+        } catch (err) {
+          this.logger.error('Failed to send JSON. There was an issue parsing.' + err);
+          res.statusCode = 500;
+          res.end('Internal Server Error');
+          return;
+        }
+        res.setHeader('Content-Type', 'application/json');
+        res.end(data);
+      },
+      send: (data: string | Array<any> | Object | Buffer) => {
+        if (typeof data === 'object' || Array.isArray(data)) {
+          try {
+            data = JSON.stringify(data);
+          } catch (err) {
+            this.logger.error('Failed to send JSON. There was an issue parsing.' + err);
+            res.statusCode = 500;
+            res.end('Internal Server Error');
+            return;
+          }
+          res.setHeader('Content-Type', 'application/json');
+          res.end(data);
+        } else if (typeof data === 'string') {
+          res.setHeader('Content-Type', 'text/plain');
+          res.end(data);
+        } else if (Buffer.isBuffer(data)) {
+          res.setHeader('Content-Type', 'application/octet-stream');
+          res.end(data);
+        }
+      },
+    } as PulseResponse;
+  }
+
   private handle(req: http.IncomingMessage, res: http.ServerResponse, handlers: PulseHandler[]) {
     const next = () => {
       const handler = handlers.shift();
-      if (handler) handler(req, res, next);
+      if (handler) handler(req, this.createPulseResponse(res), next);
     };
     next();
   }
@@ -378,11 +434,23 @@ export class PulseServer {
   };
 
   /**
+   * Adds a route to the server that responds to alll HTTP methods
+   * @param path - The path to add the route to
+   * @param handler - The handler to add to the route
+   * @param options - The options for the route
+   * @returns
+   */
+  public all(path: string, handler: PulseHandler, options?: PulseRouteOptions): PulseRouteBuilder {
+    return this.addRoute('ALL', path, handler, options);
+  }
+
+  /**
    * Adds a GET route to the server
    * @param path - The path to add the route to
    * @param handler - The handler to add to the route
+   * @param options - The options for the route
    */
-  public get(path: string, handler: PulseHandler, options?: PulseRouteOptions) {
+  public get(path: string, handler: PulseHandler, options?: PulseRouteOptions): PulseRouteBuilder {
     return this.addRoute('GET', path, handler, options);
   }
 
@@ -390,8 +458,9 @@ export class PulseServer {
    * Adds a POST route to the server
    * @param path - The path to add the route to
    * @param handler - The handler to add to the route
+   * @param options - The options for the route
    */
-  public post(path: string, handler: PulseHandler, options?: PulseRouteOptions) {
+  public post(path: string, handler: PulseHandler, options?: PulseRouteOptions): PulseRouteBuilder {
     return this.addRoute('POST', path, handler, options);
   }
 
@@ -399,8 +468,9 @@ export class PulseServer {
    * Adds a DELETE route to the server
    * @param path - The path to add the route to
    * @param handler - The handler to add to the route
+   * @param options - The options for the route
    */
-  public delete(path: string, handler: PulseHandler, options?: PulseRouteOptions) {
+  public delete(path: string, handler: PulseHandler, options?: PulseRouteOptions): PulseRouteBuilder {
     return this.addRoute('DELETE', path, handler, options);
   }
 
@@ -408,12 +478,18 @@ export class PulseServer {
    * Adds a PUT route to the server
    * @param path - The path to add the route to
    * @param handler - The handler to add to the route
+   * @param options - The options for the route
    */
-  public put(path: string, handler: PulseHandler, options?: PulseRouteOptions) {
+  public put(path: string, handler: PulseHandler, options?: PulseRouteOptions): PulseRouteBuilder {
     return this.addRoute('PUT', path, handler, options);
   }
 
-  private addRoute(method: string, path: string, handler: PulseHandler, options?: PulseRouteOptions) {
+  private addRoute(
+    method: string,
+    path: string,
+    handler: PulseHandler,
+    options?: PulseRouteOptions,
+  ): PulseRouteBuilder {
     const versionedPath = options && options.apiVersion ? options.apiVersion + path : this.config.apiVersion + path;
 
     const pattern: PulseRoutePattern = {
@@ -432,17 +508,20 @@ export class PulseServer {
     this.routes[versionedPath][method].push({ handler, pattern, paramRules: options?.paramRules });
 
     return {
-      get: (subPath: string, handler: PulseHandler, options?: PulseRouteOptions) => {
+      get: (subPath: string, handler: PulseHandler, options?: PulseRouteOptions): PulseRouteBuilder => {
         return this.addRoute('GET', path + subPath, handler, options);
       },
-      post: (subPath: string, handler: PulseHandler, options?: PulseRouteOptions) => {
+      post: (subPath: string, handler: PulseHandler, options?: PulseRouteOptions): PulseRouteBuilder => {
         return this.addRoute('POST', path + subPath, handler, options);
       },
-      put: (subPath: string, handler: PulseHandler, options?: PulseRouteOptions) => {
+      put: (subPath: string, handler: PulseHandler, options?: PulseRouteOptions): PulseRouteBuilder => {
         return this.addRoute('PUT', path + subPath, handler, options);
       },
-      delete: (subPath: string, handler: PulseHandler, options?: PulseRouteOptions) => {
+      delete: (subPath: string, handler: PulseHandler, options?: PulseRouteOptions): PulseRouteBuilder => {
         return this.addRoute('DELETE', path + subPath, handler, options);
+      },
+      all: (subPath: string, handler: PulseHandler, options?: PulseRouteOptions): PulseRouteBuilder => {
+        return this.addRoute('ALL', path + subPath, handler, options);
       },
     };
   }
