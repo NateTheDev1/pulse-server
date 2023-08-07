@@ -35,6 +35,7 @@ describe('PulseServer', () => {
       res.on('data', (chunk) => {
         data += chunk;
       });
+
       res.on('end', () => {
         expect(data).toBe('GET success');
         done();

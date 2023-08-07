@@ -289,13 +289,27 @@ export class PulseServer {
   }
 
   private createPulseResponse(res: http.ServerResponse): PulseResponse {
-    return {
-      ...res,
-      json: (data: Record<string, any>) => {
-        let newData: any;
+    // @ts-ignore
+    res.json = (data: Record<string, any>) => {
+      let newData: any;
 
+      try {
+        newData = JSON.stringify(data);
+      } catch (err) {
+        this.logger.error('Failed to send JSON. There was an issue parsing.' + err);
+        res.statusCode = 500;
+        res.end('Internal Server Error');
+        return;
+      }
+      res.setHeader('Content-Type', 'application/json');
+      res.end(newData);
+    };
+
+    //@ts-ignore
+    res.send = (data: string | any[] | Record<string, any> | Buffer) => {
+      if (typeof data === 'object' || Array.isArray(data)) {
         try {
-          newData = JSON.stringify(data);
+          data = JSON.stringify(data);
         } catch (err) {
           this.logger.error('Failed to send JSON. There was an issue parsing.' + err);
           res.statusCode = 500;
@@ -303,78 +317,70 @@ export class PulseServer {
           return;
         }
         res.setHeader('Content-Type', 'application/json');
-        res.end(newData);
-      },
-      send: (data: string | any[] | Record<string, any> | Buffer) => {
-        if (typeof data === 'object' || Array.isArray(data)) {
-          try {
-            data = JSON.stringify(data);
-          } catch (err) {
-            this.logger.error('Failed to send JSON. There was an issue parsing.' + err);
-            res.statusCode = 500;
-            res.end('Internal Server Error');
-            return;
-          }
-          res.setHeader('Content-Type', 'application/json');
-          res.end(data);
-        } else if (typeof data === 'string') {
-          res.setHeader('Content-Type', 'text/plain');
-          res.end(data);
-        } else if (Buffer.isBuffer(data)) {
-          res.setHeader('Content-Type', 'application/octet-stream');
-          res.end(data);
-        }
-      },
-      sendFile: (path: string) => {
-        fs.readFile(path, (err, data) => {
-          if (err) {
-            this.logger.error('Failed to send file. ' + err);
-            res.statusCode = 500;
-            res.end('Internal Server Error');
-            return;
-          }
-          res.end(data);
-        });
-      },
-      paginate: (data: any[], options: PulsePagination) => {
-        const limit = options.limit;
-        const page = options.page;
+        res.end(data);
+      } else if (typeof data === 'string') {
+        res.setHeader('Content-Type', 'text/plain');
+        res.end(data);
+      } else if (Buffer.isBuffer(data)) {
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.end(data);
+      }
+    };
 
-        const startIndex = (page - 1) * limit;
-        const endIndex = page * limit;
-
-        const results: Record<string, any> = {};
-
-        if (endIndex < data.length) {
-          results.next = {
-            page: page + 1,
-            limit,
-          };
-        }
-
-        if (startIndex > 0) {
-          results.previous = {
-            page: page - 1,
-            limit,
-          };
-        }
-
-        results.results = data.slice(startIndex, endIndex);
-
-        let resData: any;
-
-        try {
-          resData = JSON.stringify(data);
-        } catch (err) {
-          this.logger.error('Failed to send JSON. There was an issue parsing.' + err);
+    //@ts-ignore
+    res.sendFile = (path: string) => {
+      fs.readFile(path, (err, data) => {
+        if (err) {
+          this.logger.error('Failed to send file. ' + err);
           res.statusCode = 500;
           res.end('Internal Server Error');
           return;
         }
-        res.setHeader('Content-Type', 'application/json');
-        res.end(resData);
-      },
-    } as PulseResponse;
+        res.end(data);
+      });
+    };
+
+    //@ts-ignore
+    res.paginate = (data: any[], options: PulsePagination) => {
+      const limit = options.limit;
+      const page = options.page;
+
+      const startIndex = (page - 1) * limit;
+      const endIndex = page * limit;
+
+      const results: Record<string, any> = {};
+
+      if (endIndex < data.length) {
+        results.next = {
+          page: page + 1,
+          limit,
+        };
+      }
+
+      if (startIndex > 0) {
+        results.previous = {
+          page: page - 1,
+          limit,
+        };
+      }
+
+      results.results = data.slice(startIndex, endIndex);
+
+      let resData: any;
+
+      try {
+        resData = JSON.stringify(data);
+      } catch (err) {
+        this.logger.error('Failed to send JSON. There was an issue parsing.' + err);
+        res.statusCode = 500;
+        res.end('Internal Server Error');
+        return;
+      }
+      res.setHeader('Content-Type', 'application/json');
+      res.end(resData);
+    };
+
+    return res as PulseResponse;
   }
 
   private handle(req: http.IncomingMessage, res: http.ServerResponse, handlers: PulseHandler[]) {
