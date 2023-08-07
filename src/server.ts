@@ -48,7 +48,7 @@ export class PulseServer {
   private context: Record<string, any> = {
     pagination: {},
   };
-  private contextFn = () => {
+  private contextFn: (req: PulseRequest, res: http.ServerResponse) => void = () => {
     this.logger.info("You haven't set a context function. This is the default context function.");
   };
   private whitelist: string[] = [];
@@ -102,7 +102,7 @@ export class PulseServer {
 
     this.server = http.createServer((req: PulseRequest, res) => {
       this.context = {};
-      this.contextFn();
+      this.contextFn(req, res);
 
       const urlPath = url.parse(req.url!).pathname!;
 
@@ -243,7 +243,7 @@ export class PulseServer {
    * Sets the function ran at the predetermine context runtime.
    * @param fn The callback function
    */
-  public setContextMiddleware(fn: () => void) {
+  public setContextMiddleware(fn: (req: PulseRequest, res: http.ServerResponse) => void) {
     this.contextFn = fn;
   }
 
