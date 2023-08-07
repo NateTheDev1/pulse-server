@@ -30,6 +30,8 @@ export class PulseServer {
   private routes: Record<string, Record<string, PulseRouteInfo[]>>;
   private logger!: log4js.Logger;
   private middleware: PulseHandler[] = [];
+  private context: Record<string, any> = {};
+  private contextFn = () => {};
 
   constructor(config?: PulseConfig) {
     this.config = {
@@ -76,6 +78,9 @@ export class PulseServer {
     this.logger.info('Thank you for using Pulse!');
 
     this.server = http.createServer((req: PulseRequest, res) => {
+      this.context = {};
+      this.contextFn();
+
       const urlPath = url.parse(req.url!).pathname!;
 
       let matchedHandler: PulseHandler | null = null;
@@ -135,14 +140,25 @@ export class PulseServer {
     }
   }
 
+  /**
+   * Sets the API Version of the server
+   * @param version The version of the API to use
+   */
   public setAPIVersion(version: string) {
     this.config.apiVersion = version;
   }
 
+  /**
+   * Duh. It Enables Cors
+   */
   public enableCors() {
     this.use(this.corsMiddleware);
   }
 
+  /**
+   *  Sets the parser of the server for incoming requests. Enables Middleware
+   * @param type The type of parser to use for the body of the request
+   */
   public setParser(type: PulseBodyFormat) {
     if (type === 'JSON') {
       this.use(this.jsonMiddleware);
@@ -151,6 +167,30 @@ export class PulseServer {
     } else if (type === 'TEXT') {
       this.use(this.textMiddleware);
     }
+  }
+
+  /**
+   * Sets the function ran at the predetermine context runtime.
+   * @param fn The callback function
+   */
+  public setContextMiddleware(fn: () => void) {
+    this.contextFn = fn;
+  }
+
+  /**
+   * Sets the context of the current request
+   * @param data Context data to be passed to the server
+   */
+  public setContext(data: Record<string, any>) {
+    this.context = { ...data };
+  }
+
+  /**
+   * Gets the current context for the request.
+   * @returns The current context of the server
+   */
+  public getContext() {
+    return this.context;
   }
 
   private loadConfig() {
