@@ -305,7 +305,7 @@ export class PulseServer {
       res.end(newData);
     };
 
-    //@ts-ignore
+    // @ts-ignore
     res.send = (data: string | any[] | Record<string, any> | Buffer) => {
       if (typeof data === 'object' || Array.isArray(data)) {
         try {
@@ -327,7 +327,7 @@ export class PulseServer {
       }
     };
 
-    //@ts-ignore
+    // @ts-ignore
     res.sendFile = (path: string) => {
       fs.readFile(path, (err, data) => {
         if (err) {
@@ -340,7 +340,7 @@ export class PulseServer {
       });
     };
 
-    //@ts-ignore
+    // @ts-ignore
     res.paginate = (data: any[], options: PulsePagination) => {
       const limit = options.limit;
       const page = options.page;
