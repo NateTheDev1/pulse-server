@@ -22,10 +22,10 @@ export type PulseHandler = (req: PulseRequest, res: PulseResponse, next?: () => 
 export type PulseRequest = http.IncomingMessage & { body?: Record<string, any>; params?: querystring.ParsedUrlQuery };
 
 export type PulseResponse = http.ServerResponse & {
-  send: (data: string | Array<any> | Object | Buffer) => void;
-  json: (data: Object) => void;
+  send: (data: string | any[] | object | Buffer) => void;
+  json: (data: Record<string, any>) => void;
   sendFile: (path: string) => void;
-  paginate: (data: Array<any>, options: PulsePagination) => void;
+  paginate: (data: any[], options: PulsePagination) => void;
 };
 
 export type PulsePagination = {
@@ -48,7 +48,9 @@ export class PulseServer {
   private context: Record<string, any> = {
     pagination: {},
   };
-  private contextFn = () => {};
+  private contextFn = () => {
+    this.logger.info("You haven't set a context function. This is the default context function.");
+  };
   private whitelist: string[] = [];
   private blacklist: string[] = [];
   public auth = new PulseAuth();
@@ -289,9 +291,11 @@ export class PulseServer {
   private createPulseResponse(res: http.ServerResponse): PulseResponse {
     return {
       ...res,
-      json: (data: Object) => {
+      json: (data: Record<string, any>) => {
+        let newData: any;
+
         try {
-          data = JSON.stringify(data);
+          newData = JSON.stringify(data);
         } catch (err) {
           this.logger.error('Failed to send JSON. There was an issue parsing.' + err);
           res.statusCode = 500;
@@ -299,9 +303,9 @@ export class PulseServer {
           return;
         }
         res.setHeader('Content-Type', 'application/json');
-        res.end(data);
+        res.end(newData);
       },
-      send: (data: string | Array<any> | Object | Buffer) => {
+      send: (data: string | any[] | Record<string, any> | Buffer) => {
         if (typeof data === 'object' || Array.isArray(data)) {
           try {
             data = JSON.stringify(data);
@@ -332,7 +336,7 @@ export class PulseServer {
           res.end(data);
         });
       },
-      paginate: (data: Array<any>, options: PulsePagination) => {
+      paginate: (data: any[], options: PulsePagination) => {
         const limit = options.limit;
         const page = options.page;
 
