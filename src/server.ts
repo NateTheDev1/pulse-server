@@ -15,6 +15,7 @@ import log4js from 'log4js';
 import { PulseRouteBuilder, PulseRouteInfo, PulseRouteOptions, PulseRoutePattern, matchRoute } from './route';
 import { PulseDB } from './database';
 import { adminRouter } from './admin';
+import { PulseAuth } from './auth';
 
 export type PulseHandler = (req: PulseRequest, res: PulseResponse, next?: () => void) => void;
 
@@ -23,6 +24,13 @@ export type PulseRequest = http.IncomingMessage & { body?: Record<string, any>; 
 export type PulseResponse = http.ServerResponse & {
   send: (data: string | Array<any> | Object | Buffer) => void;
   json: (data: Object) => void;
+  sendFile: (path: string) => void;
+  paginate: (data: Array<any>, options: PulsePagination) => void;
+};
+
+export type PulsePagination = {
+  limit: number;
+  page: number;
 };
 
 export type PulseError = {};
@@ -37,10 +45,13 @@ export class PulseServer {
   private routes: Record<string, Record<string, PulseRouteInfo[]>>;
   private logger!: log4js.Logger;
   private middleware: PulseHandler[] = [];
-  private context: Record<string, any> = {};
+  private context: Record<string, any> = {
+    pagination: {},
+  };
   private contextFn = () => {};
   private whitelist: string[] = [];
   private blacklist: string[] = [];
+  public auth = new PulseAuth();
 
   constructor(config?: PulseConfig) {
     this.config = {
@@ -309,6 +320,55 @@ export class PulseServer {
           res.setHeader('Content-Type', 'application/octet-stream');
           res.end(data);
         }
+      },
+      sendFile: (path: string) => {
+        fs.readFile(path, (err, data) => {
+          if (err) {
+            this.logger.error('Failed to send file. ' + err);
+            res.statusCode = 500;
+            res.end('Internal Server Error');
+            return;
+          }
+          res.end(data);
+        });
+      },
+      paginate: (data: Array<any>, options: PulsePagination) => {
+        const limit = options.limit;
+        const page = options.page;
+
+        const startIndex = (page - 1) * limit;
+        const endIndex = page * limit;
+
+        const results: Record<string, any> = {};
+
+        if (endIndex < data.length) {
+          results.next = {
+            page: page + 1,
+            limit,
+          };
+        }
+
+        if (startIndex > 0) {
+          results.previous = {
+            page: page - 1,
+            limit,
+          };
+        }
+
+        results.results = data.slice(startIndex, endIndex);
+
+        let resData: any;
+
+        try {
+          resData = JSON.stringify(data);
+        } catch (err) {
+          this.logger.error('Failed to send JSON. There was an issue parsing.' + err);
+          res.statusCode = 500;
+          res.end('Internal Server Error');
+          return;
+        }
+        res.setHeader('Content-Type', 'application/json');
+        res.end(resData);
       },
     } as PulseResponse;
   }
