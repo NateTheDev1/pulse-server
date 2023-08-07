@@ -1,3 +1,8 @@
+/**
+ * Copyright 2023 Nathaniel Richards
+ * This document is licensed under the terms of the MIT License.
+ */
+
 import querystring from 'querystring';
 import { PulseHandler } from './server';
 
