@@ -9,6 +9,11 @@ server.setContextMiddleware((req, res) => {
   server.setContext({ user: 'test' });
 });
 
+server.use((req, res, next) => {
+  console.log('Middleware 1');
+  next();
+});
+
 server
   .get('/', (req, res) => {
     res.end('Hello World!');
