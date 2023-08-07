@@ -178,6 +178,57 @@ export class PulseServer {
     this.use(this.ipGateMiddleware);
   }
 
+  public loginUser(req: PulseRequest) {
+    const ID = this.auth.createUserDeviceID(req);
+    let exists = false;
+
+    PulseDB.deviceDatastore.find({ id: ID }, (err: any, doc: any) => {
+      if (doc.length > 0) {
+        exists = true;
+      }
+    });
+
+    if (exists) {
+      return;
+    }
+
+    PulseDB.deviceDatastore.insert({
+      id: ID,
+    });
+  }
+
+  public isUserLoggedIn(req: PulseRequest): boolean {
+    const ID = this.auth.createUserDeviceID(req);
+    let exists = false;
+
+    PulseDB.deviceDatastore.find({ id: ID }, (err: any, doc: any) => {
+      if (doc.length > 0) {
+        exists = true;
+      }
+    });
+
+    return exists;
+  }
+
+  public logoutUser(req: PulseRequest) {
+    const ID = this.auth.createUserDeviceID(req);
+    let exists = false;
+
+    PulseDB.deviceDatastore.find({ id: ID }, (err: any, doc: any) => {
+      if (doc.length > 0) {
+        exists = true;
+      }
+    });
+
+    if (!exists) {
+      return;
+    } else {
+      PulseDB.deviceDatastore.remove({ id: ID });
+    }
+  }
+
+  public logoutUserByID(id: string) {}
+
   /**
    * Blacklists a user from the server
    * @param identity The identity of the user to blacklist
