@@ -18,9 +18,16 @@ import { adminRouter } from './admin';
 import { PulseAuth } from './auth';
 import WebSocket from 'ws';
 
+export type PulseClientPriority = 'LOW' | 'MEDIUM' | 'HIGH';
+
+export type PulseClientDoc = {
+  priority: PulseClientPriority;
+  keep: string[];
+};
+
 export type PulseHandler = (req: PulseRequest, res: PulseResponse, next?: () => void) => void;
 
-export type PulseSocketHandler = (ws: WebSocket) => void;
+export type PulseSocketHandler = (data: WebSocket.Data) => void;
 
 export type PulseRequest = http.IncomingMessage & { body?: Record<string, any>; params?: querystring.ParsedUrlQuery };
 
@@ -785,6 +792,13 @@ export class PulseServer {
   }
 
   /**
+   * Closes the pulse socket server. Does not unload registered middleware.
+   */
+  public closePulseSocket() {
+    this.wsClient.close();
+  }
+
+  /**
    * Adds a callback to run when a WebSocket connection is established
    * @param callback Callback to run when a WebSocket connection is established
    */
@@ -813,12 +827,14 @@ export class PulseServer {
    * @param callback Callback to run when a message is received
    */
   public onSocketMessage(callback: (message: WebSocket.Data) => void) {
-    this.wsClient.on('message', (ws) => {
-      for (const [key, value] of Object.entries(this.socketHandlers)) {
-        value(ws);
+    this.wsClient.on('message', (data: WebSocket.Data) => {
+      for (const [, value] of Object.entries(this.socketHandlers)) {
+        value(data);
       }
 
-      callback(ws);
+      this.logger.info('WebSocket message received', { data });
+
+      callback(data);
     });
   }
 

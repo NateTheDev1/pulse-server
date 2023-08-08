@@ -37,3 +37,5 @@ server
 server.start(() => {
   console.log('Server started!');
 });
+
+server.createPulseSocket();
