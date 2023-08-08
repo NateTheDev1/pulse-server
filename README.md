@@ -1,8 +1,8 @@
 # Pulse Server Package
 
 - [] Error Handling
-- [] Built in auth using hardware and devices
-- [] Pulse Socket
+- [x] Built in auth using hardware and devices
+- [x] Pulse Socket
 - [] Pulse Client
 - [] Type Generator For Clients
 - [] Built in dashboard

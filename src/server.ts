@@ -16,8 +16,11 @@ import { PulseRouteBuilder, PulseRouteInfo, PulseRouteOptions, PulseRoutePattern
 import { PulseDB } from './database';
 import { adminRouter } from './admin';
 import { PulseAuth } from './auth';
+import WebSocket from 'ws';
 
 export type PulseHandler = (req: PulseRequest, res: PulseResponse, next?: () => void) => void;
+
+export type PulseSocketHandler = (ws: WebSocket) => void;
 
 export type PulseRequest = http.IncomingMessage & { body?: Record<string, any>; params?: querystring.ParsedUrlQuery };
 
@@ -41,13 +44,16 @@ export type PulseIPGateMethod = 'BLACKLIST' | 'WHITELIST' | 'NONE';
 
 export class PulseServer {
   private server: http.Server;
+  private wsClient!: WebSocket.Server;
   private config: PulseConfig;
   private routes: Record<string, Record<string, PulseRouteInfo[]>>;
   private logger!: log4js.Logger;
   private middleware: PulseHandler[] = [];
+  private socketHandlers: PulseSocketHandler[] = [];
   private context: Record<string, any> = {
     pagination: {},
   };
+  private connections: Record<string, WebSocket> = {};
   private contextFn: (req: PulseRequest, res: http.ServerResponse) => void = () => {
     this.logger.info("You haven't set a context function. This is the default context function.");
   };
@@ -756,6 +762,87 @@ export class PulseServer {
   private routeFallback(req: http.IncomingMessage, res: http.ServerResponse) {
     res.statusCode = 400;
     res.end('Bad Request');
+  }
+
+  /**
+   * Creates the pulse socket server
+   */
+  public createPulseSocket() {
+    this.wsClient = new WebSocket.Server({ noServer: true });
+
+    this.wsClient.on('connection', (ws: WebSocket) => {
+      ws.on('close', (code, reason) => {
+        this.logger.info('WebSocket connection closed', { code, reason });
+      });
+    });
+
+    // Upgrade the connection to WebSocket
+    this.server.on('upgrade', (request, socket, head) => {
+      this.wsClient.handleUpgrade(request, socket, head, (ws) => {
+        this.wsClient.emit('connection', ws, request);
+      });
+    });
+  }
+
+  /**
+   * Adds a callback to run when a WebSocket connection is established
+   * @param callback Callback to run when a WebSocket connection is established
+   */
+  public onSocketConnect(callback: PulseSocketHandler) {
+    this.wsClient.on('connection', callback);
+  }
+
+  /**
+   * Adds a middleware to run on a WebSocket message
+   * @param middleware Middleware to run on a WebSocket message
+   */
+  public addSocketMiddleware(middleware: PulseSocketHandler) {
+    this.socketHandlers.push(middleware);
+  }
+
+  /**
+   * Adds a callback to run when a WebSocket connection is closed
+   * @param callback Callback to run when a WebSocket connection is closed
+   */
+  public onSocketDisconnect(callback: (code: number, reason: Buffer) => void) {
+    this.wsClient.on('close', callback);
+  }
+
+  /**
+   * Adds a callback to run when a message is received from a WebSocket connection
+   * @param callback Callback to run when a message is received
+   */
+  public onSocketMessage(callback: (message: WebSocket.Data) => void) {
+    this.wsClient.on('message', (ws) => {
+      for (const [key, value] of Object.entries(this.socketHandlers)) {
+        value(ws);
+      }
+
+      callback(ws);
+    });
+  }
+
+  /**
+   * Sends a message to all WebSocket connections safely through Pulse Socket
+   * @param message Message to send
+   */
+  public sendSocketMessageAll(message: WebSocket.Data) {
+    this.wsClient.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
+  }
+
+  /**
+   * Sends a message to a WebSocket connection safely through Pulse Socket
+   * @param ws WebSocket connection
+   * @param message Message to send
+   */
+  public sendSocketMessage(ws: WebSocket, message: WebSocket.Data) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(message);
+    }
   }
 
   /**
