@@ -64,7 +64,7 @@ export class PulseServer {
   private context: Record<string, any> = {
     pagination: {},
   };
-  private connections: Record<string, WebSocket> = {};
+  private connections: Record<string, WebSocket & { priority?: PulseClientPriority; keep?: string[] }> = {};
   private contextFn: (req: PulseRequest, res: http.ServerResponse) => void = () => {
     this.logger.info("You haven't set a context function. This is the default context function.");
   };
@@ -76,6 +76,9 @@ export class PulseServer {
   private onSocketCloseCB: (code: number, reason: Buffer) => void = () => {
     this.logger.info("You haven't set a socket close callback. This is the default socket close callback.");
   };
+
+  private schemaTypes: string[] = [];
+
   public auth = new PulseAuth();
   public readonly performance = new PulsePerformance();
 
@@ -878,7 +881,27 @@ export class PulseServer {
         delete this.connections[connectionID];
       });
 
-      ws.on('message', this.onSocketMessageCB);
+      ws.on('message', (msg) => {
+        const data = JSON.parse(msg.toString());
+
+        // export type PulseClientDoc = {
+        //   priority: PulseClientPriority;
+        //   keep: string[];
+        // };
+
+        if (
+          data['priority'] &&
+          (data['priority'] === 'HIGH' || data['priority'] === 'LOW' || data['priority'] === 'NORMAL')
+        ) {
+          if (data['keep'] && Array.isArray(data['keep'])) {
+            // Find which client sent this
+            this.connections[connectionID].priority = data['priority'];
+            this.connections[connectionID].keep = data['keep'];
+          }
+        }
+
+        this.onSocketMessageCB(msg);
+      });
     });
 
     // Upgrade the connection to WebSocket
@@ -966,6 +989,47 @@ export class PulseServer {
    */
   public stop(errorCallback?: (err?: Error | undefined) => void) {
     this.server.close(errorCallback);
+  }
+
+  /**
+   * Adds a schema type to the Pulse Socket server
+   * @param name Schema type name
+   */
+  public addSchemaType(name: string) {
+    this.schemaTypes.push(name);
+  }
+
+  /**
+   * Removes a schema type from the Pulse Socket server
+   * @param name Schema type name
+   */
+  public removeSchemaType(name: string) {
+    this.schemaTypes = this.schemaTypes.filter((schema) => schema !== name);
+  }
+
+  /**
+   * Adds multiple schema types to the Pulse Socket server
+   * @param schema Schema type names
+   */
+  public addSchema(schema: string[]) {
+    schema.forEach((name) => {
+      this.schemaTypes.push(name);
+    });
+  }
+
+  /**
+   * Sends a message to all WebSocket connections subscribed to a schema type
+   * @param typeName Schema type name
+   * @param message Message to send
+   */
+  public pushMessageToSchemaSubscribers(typeName: string, message: WebSocket.Data) {
+    for (const connection of Object.values(this.connections)) {
+      if (connection.readyState === WebSocket.OPEN) {
+        if (connection.keep && connection.keep.includes(typeName)) {
+          connection.send(message);
+        }
+      }
+    }
   }
 }
 
