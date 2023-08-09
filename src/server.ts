@@ -68,8 +68,12 @@ export class PulseServer {
   };
   private whitelist: string[] = [];
   private blacklist: string[] = [];
-  private onSocketMessageCB: (message: WebSocket.Data) => void = () => {};
-  private onSocketCloseCB: (code: number, reason: Buffer) => void = () => {};
+  private onSocketMessageCB: (message: WebSocket.Data) => void = () => {
+    this.logger.info("You haven't set a socket message callback. This is the default socket message callback.");
+  };
+  private onSocketCloseCB: (code: number, reason: Buffer) => void = () => {
+    this.logger.info("You haven't set a socket close callback. This is the default socket close callback.");
+  };
   public auth = new PulseAuth();
   public readonly performance = new PulsePerformance();
 
