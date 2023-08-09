@@ -2,3 +2,4 @@ port = 5001
 usePulseLogger = true
 bodyFormat = "JSON"
 dashboard = true
+staticLogFile = true

@@ -1,0 +1,19 @@
+[2023-08-08T14:25:58.210] [INFO] default - Thank you for using Pulse!
+[2023-08-08T14:25:58.212] [INFO] default - Pulse's dashboard is now available at http://localhost:5001/admin
+[2023-08-08T14:25:58.213] [INFO] default - PulseSocket available at ws://[domain]:5001
+[2023-08-08T14:26:09.613] [INFO] default - HTTP connection upgraded
+[2023-08-08T14:27:18.096] [INFO] default - Thank you for using Pulse!
+[2023-08-08T14:27:18.098] [INFO] default - Pulse's dashboard is now available at http://localhost:5001/admin
+[2023-08-08T14:27:18.099] [INFO] default - PulseSocket available at ws://[domain]:5001
+[2023-08-08T14:27:22.263] [INFO] default - HTTP connection upgraded
+[2023-08-08T14:29:00.486] [INFO] default - Thank you for using Pulse!
+[2023-08-08T14:29:00.488] [INFO] default - Pulse's dashboard is now available at http://localhost:5001/admin
+[2023-08-08T14:29:00.489] [INFO] default - PulseSocket available at ws://[domain]:5001
+[2023-08-08T14:29:04.203] [INFO] default - HTTP connection upgraded
+[2023-08-08T14:30:06.269] [INFO] default - WebSocket connection closed { code: 1000, reason: <Buffer > }
+[2023-08-08T14:30:07.797] [INFO] default - HTTP connection upgraded
+[2023-08-08T14:38:00.533] [INFO] default - Thank you for using Pulse!
+[2023-08-08T14:38:00.536] [INFO] default - Pulse's dashboard is now available at http://localhost:5001/admin
+[2023-08-08T14:38:00.537] [INFO] default - PulseSocket available at ws://[domain]:5001
+[2023-08-08T14:38:02.015] [INFO] default - HTTP connection upgraded
+[2023-08-08T14:38:15.579] [INFO] default - WebSocket connection closed { code: 1000, reason: <Buffer > }

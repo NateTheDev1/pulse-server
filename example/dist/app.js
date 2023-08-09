@@ -36,4 +36,7 @@ server.start(() => {
     console.log('Server started!');
 });
 server.createPulseSocket();
+server.onSocketMessage((data) => {
+    console.log(data);
+});
 //# sourceMappingURL=app.js.map
