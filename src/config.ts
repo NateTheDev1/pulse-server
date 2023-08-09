@@ -21,4 +21,6 @@ export type PulseConfig = {
   };
   dashboard?: boolean;
   ipGateMethod?: PulseIPGateMethod;
+  usePerformanceMonitor?: boolean;
+  performanceMonitoringLevel?: 1 | 2 | 3;
 };

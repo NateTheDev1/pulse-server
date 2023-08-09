@@ -1,5 +1,7 @@
 port = 5001
 usePulseLogger = true
 bodyFormat = "JSON"
-dashboard = true
+dashboard = false
 staticLogFile = true
+usePerformanceMonitor = true
+performanceMonitoringLevel = 1

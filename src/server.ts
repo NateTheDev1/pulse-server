@@ -18,6 +18,7 @@ import { adminRouter } from './admin';
 import { PulseAuth } from './auth';
 import WebSocket from 'ws';
 import { v4 as uuidv4 } from 'uuid';
+import { PulsePerformance } from './performance';
 
 export type PulseClientPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -67,7 +68,10 @@ export class PulseServer {
   };
   private whitelist: string[] = [];
   private blacklist: string[] = [];
+  private onSocketMessageCB: (message: WebSocket.Data) => void = () => {};
+  private onSocketCloseCB: (code: number, reason: Buffer) => void = () => {};
   public auth = new PulseAuth();
+  public readonly performance = new PulsePerformance();
 
   constructor(config?: PulseConfig) {
     this.config = {
@@ -82,7 +86,11 @@ export class PulseServer {
       rateLimit: config?.rateLimit ?? undefined,
       dashboard: process.env.NODE_ENV === 'development' && config?.dashboard ? config.dashboard : false,
       ipGateMethod: config?.ipGateMethod ?? 'NONE',
+      usePerformanceMonitor: config?.usePerformanceMonitor ?? false,
+      performanceMonitoringLevel: config?.performanceMonitoringLevel ?? 1,
     };
+
+    this.performance = new PulsePerformance((this.config.performanceMonitoringLevel ?? 1) * 1000);
 
     if (!config) {
       this.loadConfig();
@@ -117,6 +125,15 @@ export class PulseServer {
     this.server = http.createServer((req: PulseRequest, res) => {
       this.context = {};
       this.contextFn(req, res);
+
+      const startTime = Date.now();
+
+      res.on('finish', () => {
+        const endTime = Date.now();
+
+        const duration = endTime - startTime; // This is your request time
+        this.performance.logRequestTime(duration);
+      });
 
       const urlPath = url.parse(req.url!).pathname!;
 
@@ -183,7 +200,15 @@ export class PulseServer {
 
     this.use(this.validateParamsMiddleware);
 
+    if (this.config.usePerformanceMonitor) {
+      this.performance.startMonitoring((data) => {
+        this.logger.info(data);
+      });
+    }
+
     if (this.config.dashboard) {
+      this.performance.startMonitoring();
+
       adminRouter(this);
 
       this.logger.info("Pulse's dashboard is now available at http://localhost:" + this.config.port + '/admin');
@@ -783,10 +808,14 @@ export class PulseServer {
     this.wsClient.on('connection', (ws: WebSocket) => {
       const connectionID = uuidv4();
       this.connections[connectionID] = ws;
+
       ws.on('close', (code, reason) => {
+        this.onSocketCloseCB(code, reason);
         this.logger.info('WebSocket connection closed', { code, reason });
         delete this.connections[connectionID];
       });
+
+      ws.on('message', this.onSocketMessageCB);
     });
 
     // Upgrade the connection to WebSocket
@@ -826,7 +855,7 @@ export class PulseServer {
    * @param callback Callback to run when a WebSocket connection is closed
    */
   public onSocketDisconnect(callback: (code: number, reason: Buffer) => void) {
-    this.wsClient.on('close', callback);
+    this.onSocketCloseCB = callback;
   }
 
   /**
@@ -834,13 +863,7 @@ export class PulseServer {
    * @param callback Callback to run when a message is received
    */
   public onSocketMessage(callback: (message: WebSocket.Data) => void) {
-    // connection.on('message', (data: WebSocket.Data) => {
-    //   this.logger.info('WebSocket message received', { data });
-    //   for (const [, value] of Object.entries(this.socketHandlers)) {
-    //     value(data);
-    //   }
-    //   callback(data);
-    // });
+    this.onSocketMessageCB = callback;
   }
 
   /**

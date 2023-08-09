@@ -41,5 +41,5 @@ server.start(() => {
 server.createPulseSocket();
 
 server.onSocketMessage((data) => {
-  console.log(data);
+  console.log(data.toString());
 });
