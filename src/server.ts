@@ -17,6 +17,7 @@ import { PulseDB } from './database';
 import { adminRouter } from './admin';
 import { PulseAuth } from './auth';
 import WebSocket from 'ws';
+import { v4 as uuidv4 } from 'uuid';
 
 export type PulseClientPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -83,6 +84,10 @@ export class PulseServer {
       ipGateMethod: config?.ipGateMethod ?? 'NONE',
     };
 
+    if (!config) {
+      this.loadConfig();
+    }
+
     if (this.config.staticLogFile) {
       log4js.configure({
         appenders: {
@@ -101,10 +106,6 @@ export class PulseServer {
           default: { appenders: ['out'], level: 'debug' },
         },
       });
-    }
-
-    if (!config) {
-      this.loadConfig();
     }
 
     this.routes = {};
@@ -777,15 +778,21 @@ export class PulseServer {
   public createPulseSocket() {
     this.wsClient = new WebSocket.Server({ noServer: true });
 
+    this.logger.info('PulseSocket available at ws://[domain]:' + this.config.port);
+
     this.wsClient.on('connection', (ws: WebSocket) => {
+      const connectionID = uuidv4();
+      this.connections[connectionID] = ws;
       ws.on('close', (code, reason) => {
         this.logger.info('WebSocket connection closed', { code, reason });
+        delete this.connections[connectionID];
       });
     });
 
     // Upgrade the connection to WebSocket
     this.server.on('upgrade', (request, socket, head) => {
       this.wsClient.handleUpgrade(request, socket, head, (ws) => {
+        this.logger.info('HTTP connection upgraded');
         this.wsClient.emit('connection', ws, request);
       });
     });
@@ -827,15 +834,13 @@ export class PulseServer {
    * @param callback Callback to run when a message is received
    */
   public onSocketMessage(callback: (message: WebSocket.Data) => void) {
-    this.wsClient.on('message', (data: WebSocket.Data) => {
-      for (const [, value] of Object.entries(this.socketHandlers)) {
-        value(data);
-      }
-
-      this.logger.info('WebSocket message received', { data });
-
-      callback(data);
-    });
+    // connection.on('message', (data: WebSocket.Data) => {
+    //   this.logger.info('WebSocket message received', { data });
+    //   for (const [, value] of Object.entries(this.socketHandlers)) {
+    //     value(data);
+    //   }
+    //   callback(data);
+    // });
   }
 
   /**
