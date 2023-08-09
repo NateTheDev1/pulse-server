@@ -789,10 +789,10 @@ export class PulseServer {
 
   private handleDashboardStatics(req: PulseRequest, res: http.ServerResponse) {
     const parsedUrl = url.parse(req.url!, true);
-    let pathname = `.${parsedUrl.pathname}`;
+    const pathname = `.${parsedUrl.pathname}`;
     const filePath = path.join(__dirname, 'admin', 'dashboard', pathname);
 
-    fs.exists(filePath, function (exists) {
+    fs.exists(filePath, (exists) => {
       if (!exists) {
         res.writeHead(404, { 'Content-Type': 'text/plain' });
         res.write('404 Not Found\n');
