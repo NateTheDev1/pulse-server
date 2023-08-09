@@ -18,7 +18,6 @@ export type PulsePerformanceStatisticalData = {
   processMemoryUsage?: NodeJS.MemoryUsage;
   requestTime?: number;
   totalRequests?: number;
-  failedRequests?: number;
 };
 
 export interface MonitoringOptions {
@@ -102,6 +101,8 @@ export class PulsePerformance {
    */
   public logRequestTime(duration: number) {
     if (this.options.monitorRequestTime) {
+      this.stats.totalRequests = (this.stats.totalRequests || 0) + 1;
+
       this.stats.requestTime = duration;
       this.addToHistory('requestTime', this.stats.requestTime);
     }

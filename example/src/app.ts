@@ -3,14 +3,10 @@ import Pulse from 'pulse-server';
 const server = new Pulse();
 
 server.setContextMiddleware((req, res) => {
-  console.log(req);
-  console.log(res);
-
   server.setContext({ user: 'test' });
 });
 
 server.use((req, res, next) => {
-  console.log('Middleware 1');
   next();
 });
 

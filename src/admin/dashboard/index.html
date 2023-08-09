@@ -14,8 +14,13 @@
   </head>
   <body>
     <nav>
-      <img src="./logo_both.svg" alt="Pulse Logo" class="logo" />
-      <h1>Dashboard</h1>
+      <div class="left">
+        <img src="logo_both.svg" alt="Pulse Logo" class="logo" />
+        <h1>Dashboard</h1>
+      </div>
+      <div class="right">
+        <a href="https://pulsesdk.com">V0.2.1 ALPHA</a>
+      </div>
     </nav>
     <div class="top">
       <p>
@@ -27,84 +32,126 @@
       <h2>Server Info</h2>
       <div class="info-item">
         <p>Server Port</p>
-        <p>-----</p>
+        <p id="server-port">-----</p>
+      </div>
+      <div class="info-item">
+        <p>OS Type</p>
+        <p id="os-type">-----</p>
+      </div>
+      <div class="info-item">
+        <p>OS Release</p>
+        <p id="os-release">-----</p>
       </div>
       <div class="info-item">
         <p>Server Config Method Used</p>
-        <p>-----</p>
+        <p id="config-method">-----</p>
       </div>
       <h2>Server Configuration</h2>
       <div class="config">
         <div class="info-item">
           <p class="highlight">usePulseLogger?: boolean</p>
-          <p>-----</p>
+          <p id="use-pulse-logger">-----</p>
         </div>
         <div class="info-item">
           <p class="highlight">bodyFormat?: PulseBodyFormat</p>
-          <p>-----</p>
+          <p id="body-format">-----</p>
         </div>
         <div class="info-item">
           <p class="highlight">useCors?: boolean</p>
-          <p>-----</p>
+          <p id="use-cors">-----</p>
         </div>
         <div class="info-item">
           <p class="highlight">apiVersion?: string</p>
-          <p>-----</p>
+          <p id="api-version">-----</p>
         </div>
         <div class="info-item">
           <p class="highlight">disableParamMiddleware?: boolean</p>
-          <p>-----</p>
+          <p id="disable-param-middleware">-----</p>
         </div>
         <div class="info-item">
           <p class="highlight">staticLogFile?: boolean</p>
-          <p>-----</p>
+          <p id="static-log-file">-----</p>
         </div>
         <div class="info-item">
           <p class="highlight">staticLogFileName?: boolean</p>
-          <p>-----</p>
+          <p id="static-log-file-name">-----</p>
         </div>
         <div class="info-item">
-          <p class="highlight">rateLimit</p>
-          <p>-----</p>
+          <p class="highlight">rateLimit.enabled: boolean</p>
+          <p id="rate-limit">-----</p>
+        </div>
+        <div class="info-item">
+          <p class="highlight">rateLimit.timeMs: number</p>
+          <p id="rate-limit-time-ms">-----</p>
+        </div>
+        <div class="info-item">
+          <p class="highlight">rateLimit.maxRequests: number</p>
+          <p id="rate-limit-max-requests">-----</p>
         </div>
         <div class="info-item">
           <p class="highlight">dashboard?: boolean</p>
-          <p>-----</p>
+          <p id="dashboard">-----</p>
         </div>
         <div class="info-item">
           <p class="highlight">ipGateMethod?: PulseIPGateMethod</p>
-          <p>-----</p>
+          <p id="ip-gate-method">-----</p>
         </div>
         <div class="info-item">
           <p class="highlight">usePerformanceMonitor?: boolean</p>
-          <p>-----</p>
+          <p id="use-performance-monitor">-----</p>
         </div>
         <div class="info-item">
           <p class="highlight">performanceMonitoringLevel?: number</p>
-          <p>-----</p>
+          <p id="performance-monitoring-level">-----</p>
         </div>
       </div>
-      <!-- <pre>
-        {
-          port: number;
-          usePulseLogger?: boolean;
-          bodyFormat?: PulseBodyFormat;
-          useCors?: boolean;
-          apiVersion?: string;
-          disableParamMiddleware?: boolean;
-          staticLogFile?: boolean;
-          staticLogFileName?: string;
-          rateLimit?: {
-            enabled: boolean;
-            timeMs: number;
-            maxRequests: number;
-          };
-          dashboard?: boolean;
-          ipGateMethod?: PulseIPGateMethod;
-          usePerformanceMonitor?: boolean;
-          performanceMonitoringLevel?: 1 | 2 | 3;
-        }
-      </pre> -->
     </div>
+    <div class="stats-info">
+      <h2>Server Statistics <span class="sub">Last updated Just Now</span></h2>
+      <p>Below are the live statistic values of your server.</p>
+      <div class="stats-grid">
+        <div class="stat">
+          <p>Load Average</p>
+          <p id="load-average">-----</p>
+        </div>
+        <div class="stat">
+          <p>Free Memory</p>
+          <p id="free-memory">-----</p>
+        </div>
+        <div class="stat">
+          <p>Total Memory</p>
+          <p id="total-memory">-----</p>
+        </div>
+        <div class="stat">
+          <p>CPU Info</p>
+          <p id="cpu-info">-----</p>
+        </div>
+        <div class="stat">
+          <p>System Uptime</p>
+          <p id="system-uptime">-----</p>
+        </div>
+        <div class="stat">
+          <p>Node Process Uptime</p>
+          <p id="node-process-uptime">-----</p>
+        </div>
+        <div class="stat">
+          <p>Network Interfaces</p>
+          <p id="network-interfaces">-----</p>
+        </div>
+        <div class="stat">
+          <p>Process Memory Usage</p>
+          <p id="process-memory-usage">-----</p>
+        </div>
+        <div class="stat">
+          <p>Request Time</p>
+          <p id="request-time">-----</p>
+        </div>
+        <div class="stat">
+          <p>Total Requests</p>
+          <p id="total-requests">-----</p>
+        </div>
+      </div>
+    </div>
+    <script src="app.js"></script>
   </body>
 </html>

@@ -13,4 +13,12 @@ export const adminRouter = (server: PulseServer) => {
 
     res.end(html);
   });
+
+  server.get('/pulse/stats', (req, res) => {
+    res.json({
+      ...server.performance.getStats(),
+      config: server.getConfig(),
+      configMethod: server.getConfigMethod(),
+    });
+  });
 };

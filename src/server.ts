@@ -19,6 +19,7 @@ import { PulseAuth } from './auth';
 import WebSocket from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 import { PulsePerformance } from './performance';
+import path from 'path';
 
 export type PulseClientPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -55,6 +56,7 @@ export class PulseServer {
   private server: http.Server;
   private wsClient!: WebSocket.Server;
   private config: PulseConfig;
+  private configMethod: 'RUNTIME' | 'TOML' = 'RUNTIME';
   private routes: Record<string, Record<string, PulseRouteInfo[]>>;
   private logger!: log4js.Logger;
   private middleware: PulseHandler[] = [];
@@ -87,7 +89,11 @@ export class PulseServer {
       disableParamMiddleware: config?.disableParamMiddleware ?? false,
       staticLogFile: config?.staticLogFile ?? false,
       staticLogFileName: config?.staticLogFileName ?? 'pulse.log',
-      rateLimit: config?.rateLimit ?? undefined,
+      rateLimit: config?.rateLimit ?? {
+        enabled: false,
+        maxRequests: 100,
+        timeMs: 36000,
+      },
       dashboard: process.env.NODE_ENV === 'development' && config?.dashboard ? config.dashboard : false,
       ipGateMethod: config?.ipGateMethod ?? 'NONE',
       usePerformanceMonitor: config?.usePerformanceMonitor ?? false,
@@ -140,6 +146,16 @@ export class PulseServer {
       });
 
       const urlPath = url.parse(req.url!).pathname!;
+
+      if (
+        urlPath.includes('app.css') ||
+        urlPath.includes('app.js') ||
+        urlPath.includes('favicon.ico') ||
+        urlPath.includes('logo_both.svg')
+      ) {
+        this.handleDashboardStatics(req, res);
+        return;
+      }
 
       let matchedHandler: PulseHandler | null = null;
       for (const pattern in this.routes) {
@@ -242,6 +258,22 @@ export class PulseServer {
     PulseDB.deviceDatastore.insert({
       id: ID,
     });
+  }
+
+  /**
+   * Gets the Pulse config
+   * @returns The Pulse config
+   */
+  public getConfig(): PulseConfig {
+    return this.config;
+  }
+
+  /**
+   * Gets the config method
+   * @returns The config method
+   */
+  public getConfigMethod(): string {
+    return this.configMethod;
   }
 
   /**
@@ -389,6 +421,7 @@ export class PulseServer {
   }
 
   private loadConfig() {
+    this.configMethod = 'TOML';
     console.log('No config provided, loading pulse.toml');
 
     try {
@@ -752,6 +785,32 @@ export class PulseServer {
    */
   public put(path: string, handler: PulseHandler, options?: PulseRouteOptions): PulseRouteBuilder {
     return this.addRoute('PUT', path, handler, options);
+  }
+
+  private handleDashboardStatics(req: PulseRequest, res: http.ServerResponse) {
+    const parsedUrl = url.parse(req.url!, true);
+    let pathname = `.${parsedUrl.pathname}`;
+    const filePath = path.join(__dirname, 'admin', 'dashboard', pathname);
+
+    fs.exists(filePath, function (exists) {
+      if (!exists) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.write('404 Not Found\n');
+        res.end();
+        return;
+      }
+
+      if (filePath.endsWith('.js')) {
+        res.writeHead(200, { 'Content-Type': 'text/javascript' });
+        fs.createReadStream(filePath).pipe(res);
+      } else if (filePath.endsWith('.css')) {
+        res.writeHead(200, { 'Content-Type': 'text/css' });
+        fs.createReadStream(filePath).pipe(res);
+      } else if (filePath.endsWith('.svg')) {
+        res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
+        fs.createReadStream(filePath).pipe(res);
+      }
+    });
   }
 
   private addRoute(
